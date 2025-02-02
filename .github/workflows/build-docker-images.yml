@@ -40,13 +40,15 @@ jobs:
           persist-credentials: false
       - run: |
           source ./staticnode/node-version.sh
-          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          arch=loong64
           echo "NODE_ARCH_RELEASE=$arch:$NODE_VERSION" >> $GITHUB_ENV
       # Pull the previous image, but if it fails return true anyway.
       # Sometimes we add new docker images and if they've never been pushed
       # they can't be pulled.
+      - name: Setup QEMU
+        run: docker run --rm --privileged ghcr.io/loong64/qemu-user-static --reset -p yes
       - name: Pull existing image
-        run: docker pull ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
+        run: docker pull --platform linux/loong64 ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
 
       - name: Get image name
         id: image-name
@@ -71,6 +73,7 @@ jobs:
           context: ${{ matrix.IMAGE.DOCKERFILE_PATH }}
           cache-from: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
           tags: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
+          platforms: linux/loong64
           pull: true
           build-args: |
             NODE_ARCH_RELEASE=${{ env.NODE_ARCH_RELEASE }}

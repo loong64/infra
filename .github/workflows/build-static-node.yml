@@ -1,6 +1,7 @@
 name: Build Static Node.js Container
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - '.github/workflows/build-static-node.yml'
@@ -35,6 +36,8 @@ jobs:
         echo "NODE_SHA256SUM=$NODE_SHA256SUM" >> $GITHUB_ENV
         arch=loongarch64
         echo "NODE_ARCH=$arch" >> $GITHUB_ENV
+    - name: Setup QEMU
+      run: docker run --rm --privileged ghcr.io/loong64/qemu-user-static --reset -p yes
     - name: Build the Docker image
       run: |
         echo building node.js $NODE_VERSION
