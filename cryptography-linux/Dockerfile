@@ -8,9 +8,11 @@ WORKDIR /root
 RUN \
   if [ $(uname -m) = "loongarch64" ]; \
   then \
-    yum -y install perl perl-IPC-Cmd && \
-    yum -y clean all && \
-    rm -rf /var/cache/yum; \
+    if stat /etc/opencloudos-release 1>&2 2>/dev/null; then \
+      yum -y install perl perl-IPC-Cmd && \
+      yum -y clean all && \
+      rm -rf /var/cache/yum; \
+    fi; \
   fi
 
 COPY --from=staticnodejs /out/ /staticnode/

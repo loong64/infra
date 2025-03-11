@@ -79,6 +79,7 @@ jobs:
           build-args: |
             NODE_ARCH_RELEASE=${{ env.NODE_ARCH_RELEASE }}
             ${{ matrix.IMAGE.BUILD_ARGS }}
+          push: true
       - uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2  # v2.2.3
         with:
           subject-name: "ghcr.io/loong64/${{ steps.image-name.outputs.ATTEST_IMAGE }}"
