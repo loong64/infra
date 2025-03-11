@@ -44,7 +44,7 @@ jobs:
         source ./staticnode/node-version.sh
         echo "NODE_VERSION=$NODE_VERSION" >> $GITHUB_ENV
         echo "NODE_SHA256SUM=$NODE_SHA256SUM" >> $GITHUB_ENV
-        arch=loongarch64
+        arch=loong64
         echo "NODE_ARCH=$arch" >> $GITHUB_ENV
 
     - name: Setup QEMU
@@ -70,6 +70,7 @@ jobs:
           SHA256SUM=${{ env.NODE_SHA256SUM }}
         tags: |
           ghcr.io/loong64/static-nodejs-${{ env.NODE_ARCH }}:${{ env.NODE_VERSION }}
+          ghcr.io/loong64/static-nodejs-${{ matrix.IMAGE.MANYLINUX_ARCH }}:${{ env.NODE_VERSION }}
         outputs: type=image,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
