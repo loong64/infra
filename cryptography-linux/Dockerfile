@@ -8,8 +8,8 @@ WORKDIR /root
 RUN \
   if [ $(uname -m) = "loongarch64" ]; \
   then \
-    if stat /etc/anolis-release 1>&2 2>/dev/null; then \
-      yum -y install perl perl-IPC-Cmd && \
+    if stat /etc/opencloudos-release 1>&2 2>/dev/null; then \
+      yum -y install perl perl-FindBin perl-IPC-Cmd && \
       yum -y clean all && \
       rm -rf /var/cache/yum; \
     fi; \
