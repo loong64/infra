@@ -50,6 +50,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Pull existing image
         run: docker pull --platform linux/loong64 ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
 
       - name: Get image name
         id: image-name
