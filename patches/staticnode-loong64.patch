@@ -1,0 +1,38 @@
+diff --git a/staticnode/Dockerfile b/staticnode/Dockerfile
+index 52e7fda..06fc8ea 100644
+--- a/staticnode/Dockerfile
++++ b/staticnode/Dockerfile
+@@ -1,4 +1,4 @@
+-FROM alpine:latest
++FROM ghcr.io/loong64/alpine:latest
+ ARG VERSION
+ # One of x64 or arm64
+ ARG ARCH
+@@ -8,13 +8,13 @@ ARG SHA256SUM
+ RUN mkdir -p /build
+ WORKDIR /build
+ 
+-RUN apk add --no-cache binutils-gold curl g++ gcc gnupg libgcc linux-headers make python3 libstdc++
++RUN apk add --no-cache curl g++ gcc gnupg libgcc linux-headers make python3 libstdc++
+ RUN mkdir -p /out/bin
+ 
+ RUN curl -O https://nodejs.org/dist/$VERSION/node-$VERSION.tar.gz
+ RUN echo "$SHA256SUM  node-$VERSION.tar.gz" | sha256sum -c -
+ RUN tar -zxvf node-$VERSION.tar.gz
+-RUN cd node-$VERSION && ./configure --dest-cpu=$ARCH --fully-static && make -j$(nproc)
++RUN cd node-$VERSION && ./configure --dest-cpu=$ARCH --fully-static --openssl-no-asm && make -j$(nproc)
+ RUN cp /build/node-$VERSION/LICENSE /out/LICENSE && cp /build/node-$VERSION/out/Release/node /out/bin/node
+ 
+ FROM scratch
+diff --git a/staticnode/Dockerfile-test b/staticnode/Dockerfile-test
+index 3439081..f115195 100644
+--- a/staticnode/Dockerfile-test
++++ b/staticnode/Dockerfile-test
+@@ -1,6 +1,6 @@
+ ARG MANYLINUX_ARCH
+ ARG CONTAINER_NAME
+ FROM ${CONTAINER_NAME} AS staticnodejs
+-FROM quay.io/pypa/manylinux2014_${MANYLINUX_ARCH}
++FROM ghcr.io/loong64/manylinux_2_38_${MANYLINUX_ARCH}
+ 
+ COPY --from=staticnodejs /out /staticnode/

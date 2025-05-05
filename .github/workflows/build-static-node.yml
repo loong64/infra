@@ -29,10 +29,21 @@ jobs:
     - uses: actions/checkout@v4.2.2
       with:
         persist-credentials: false
+    - uses: actions/checkout@v4.2.2
+      with:
+        repository: pyca/infra
+        sparse-checkout: |
+          staticnode
+          cryptography-linux
+        path: source
     - uses: docker/setup-qemu-action@v3
     - uses: docker/setup-buildx-action@v3
     - name: Set Node.js version
       run: |
+        mv source/cryptography-linux cryptography-linux
+        mv source/staticnode staticnode
+        rm -rf source
+        git apply patches/*.patch
         source ./staticnode/node-version.sh
         echo "NODE_VERSION=$NODE_VERSION" >> $GITHUB_ENV
         echo "NODE_SHA256SUM=$NODE_SHA256SUM" >> $GITHUB_ENV
