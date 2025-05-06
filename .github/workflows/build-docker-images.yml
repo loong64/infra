@@ -31,8 +31,16 @@ jobs:
       fail-fast: false
       matrix:
         IMAGE:
-          - {TAG_NAME: "cryptography-manylinux_2_38:loongarch64", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_38_loongarch64", RUNNER: "ubuntu-latest"}
-          - {TAG_NAME: "cryptography-musllinux_1_2:loongarch64", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_loongarch64", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-manylinux2014:ppc64le", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-manylinux_2_28:ppc64le", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-musllinux_1_2:ppc64le", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-latest"}
+
+          - {TAG_NAME: "cryptography-manylinux2014:s390x", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_ppc64le", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-manylinux_2_28:s390x", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_s390x", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-musllinux_1_2:s390x", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_s390x", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-latest"}
+
+          - {TAG_NAME: "cryptography-manylinux_2_38:loongarch64", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_38_loongarch64", MANYLINUX_ARCH: "loongarch64", RUNNER: "ubuntu-latest"}
+          - {TAG_NAME: "cryptography-musllinux_1_2:loongarch64", DOCKERFILE_PATH: "cryptography-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_loongarch64", MANYLINUX_ARCH: "loongarch64", RUNNER: "ubuntu-latest"}
 
     name: "${{ matrix.IMAGE.TAG_NAME }}"
     steps:
@@ -52,7 +60,23 @@ jobs:
           rm -rf source
           git apply patches/*.patch
           source ./staticnode/node-version.sh
-          arch=loong64
+          case ${{ matrix.IMAGE.MANYLINUX_ARCH }} in
+            loongarch64)
+              arch=loong64
+              sed -i 's@quay.io/pypa/${PYCA_RELEASE}@ghcr.io/loong64/${PYCA_RELEASE}@g' cryptography-linux/Dockerfile
+              ;;
+            ppc64le)
+              arch=ppc64le
+              ;;
+            s390x)
+              arch=s390x
+              ;;
+            *)
+              echo "Unsupported architecture: ${{ matrix.IMAGE.MANYLINUX_ARCH }}"
+              exit 1
+              ;;
+          esac
+          echo "BUILD_ARCH=$arch" >> $GITHUB_ENV
           echo "NODE_ARCH_RELEASE=$arch:$NODE_VERSION" >> $GITHUB_ENV
       # Pull the previous image, but if it fails return true anyway.
       # Sometimes we add new docker images and if they've never been pushed
@@ -60,7 +84,7 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
       - name: Pull existing image
-        run: docker pull --platform linux/loong64 ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
+        run: docker pull --platform linux/$BUILD_ARCH ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
         if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
 
       - name: Get image name
@@ -86,7 +110,7 @@ jobs:
           context: ${{ matrix.IMAGE.DOCKERFILE_PATH }}
           cache-from: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
           tags: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
-          platforms: linux/loong64
+          platforms: linux/${{ env.BUILD_ARCH }}
           pull: true
           build-args: |
             NODE_ARCH_RELEASE=${{ env.NODE_ARCH_RELEASE }}

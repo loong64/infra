@@ -1,14 +1,13 @@
 diff --git a/cryptography-linux/Dockerfile b/cryptography-linux/Dockerfile
-index d3d7f51..c5281f2 100644
+index d3d7f51..0c5376c 100644
 --- a/cryptography-linux/Dockerfile
 +++ b/cryptography-linux/Dockerfile
 @@ -1,29 +1,23 @@
  ARG NODE_ARCH_RELEASE
  ARG PYCA_RELEASE
 -FROM ghcr.io/pyca/static-nodejs-${NODE_ARCH_RELEASE} AS staticnodejs
--FROM quay.io/pypa/${PYCA_RELEASE}
 +FROM ghcr.io/loong64/static-nodejs-${NODE_ARCH_RELEASE} AS staticnodejs
-+FROM ghcr.io/loong64/${PYCA_RELEASE}
+ FROM quay.io/pypa/${PYCA_RELEASE}
  LABEL org.opencontainers.image.authors="Python Cryptographic Authority"
  WORKDIR /root
  RUN \

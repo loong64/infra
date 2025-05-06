@@ -25,6 +25,9 @@ jobs:
       matrix:
         IMAGE:
           - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "loongarch64"}
+          - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "ppc64le"}
+          - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "s390x"}
+          
     steps:
     - uses: actions/checkout@v4.2.2
       with:
@@ -47,16 +50,36 @@ jobs:
         source ./staticnode/node-version.sh
         echo "NODE_VERSION=$NODE_VERSION" >> $GITHUB_ENV
         echo "NODE_SHA256SUM=$NODE_SHA256SUM" >> $GITHUB_ENV
-        arch=loong64
-        echo "NODE_ARCH=$arch" >> $GITHUB_ENV
+        case ${{ matrix.IMAGE.MANYLINUX_ARCH }} in
+          loongarch64)
+            arch=loong64
+            node_arch=loong64
+            sed -i 's/--fully-static/--fully-static --openssl-no-asm/g' staticnode/Dockerfile
+            sed -i 's/manylinux2014/manylinux_2_38/g' staticnode/Dockerfile
+            ;;
+          ppc64le)
+            arch=ppc64le
+            node_arch=ppc64
+            ;;
+          s390x)
+            arch=s390x
+            node_arch=s390x
+            ;;
+          *)
+            echo "Unsupported architecture: ${{ matrix.IMAGE.MANYLINUX_ARCH }}"
+            exit 1
+            ;;
+        esac
+        echo "BUILD_ARCH=$arch" >> $GITHUB_ENV
+        echo "NODE_ARCH=$node_arch" >> $GITHUB_ENV
     - name: Build the Docker image
       run: |
         echo building node.js $NODE_VERSION
-        docker buildx build --platform linux/loong64 --tag ghcr.io/loong64/static-nodejs-$NODE_ARCH:$NODE_VERSION --build-arg VERSION=$NODE_VERSION --build-arg ARCH=$NODE_ARCH --build-arg SHA256SUM=$NODE_SHA256SUM staticnode --load
-    - name: Test static node.js on manylinux_2_38
+        docker buildx build --platform linux/$BUILD_ARCH --tag ghcr.io/loong64/static-nodejs-$BUILD_ARCH:$NODE_VERSION --build-arg VERSION=$NODE_VERSION --build-arg ARCH=$NODE_ARCH --build-arg SHA256SUM=$NODE_SHA256SUM staticnode --load
+    - name: Test static node.js on manylinux
       run: |
         cd staticnode
-        docker buildx build --platform linux/loong64 -f Dockerfile-test -t test-node --build-arg MANYLINUX_ARCH=${{ matrix.IMAGE.MANYLINUX_ARCH }} --build-arg CONTAINER_NAME=ghcr.io/loong64/static-nodejs-$NODE_ARCH:$NODE_VERSION . --load
+        docker buildx build --platform linux/$BUILD_ARCH -f Dockerfile-test -t test-node --build-arg MANYLINUX_ARCH=${{ matrix.IMAGE.MANYLINUX_ARCH }} --build-arg CONTAINER_NAME=ghcr.io/loong64/static-nodejs-$BUILD_ARCH:$NODE_VERSION . --load
         docker run test-node /staticnode/bin/node -e "console.log('hello world'); console.log(process.version)"
     - name: Login to github
       uses: docker/login-action@v3
@@ -65,4 +88,4 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Push image
-      run: docker push "ghcr.io/loong64/static-nodejs-${NODE_ARCH}:${NODE_VERSION}"
+      run: docker push "ghcr.io/loong64/static-nodejs-${BUILD_ARCH}:${NODE_VERSION}"
