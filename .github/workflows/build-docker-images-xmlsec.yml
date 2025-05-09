@@ -1,0 +1,123 @@
+name: Docker Image Builder (xmlsec)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run once a week on Fridays
+    - cron: "0 0 * * FRI"
+  pull_request:
+    paths:
+      - '.github/workflows/build-docker-images-xmlsec.yml'
+      - 'xmlsec-linux/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-docker-images-xmlsec.yml'
+      - 'xmlsec-linux/**'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.IMAGE.RUNNER }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        IMAGE:
+          - {TAG_NAME: "xmlsec-manylinux2014:x86_64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_x86_64", MANYLINUX_ARCH: "x86_64", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-manylinux_2_28:x86_64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_x86_64", MANYLINUX_ARCH: "x86_64", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-musllinux_1_2:x86_64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_x86_64", MANYLINUX_ARCH: "x86_64", RUNNER: "ubuntu-24.04"}
+
+          - {TAG_NAME: "xmlsec-manylinux2014:aarch64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_aarch64", MANYLINUX_ARCH: "aarch64", RUNNER: "ubuntu-24.04-arm"}
+          - {TAG_NAME: "xmlsec-manylinux_2_28:aarch64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_aarch64", MANYLINUX_ARCH: "aarch64", RUNNER: "ubuntu-24.04-arm"}
+          - {TAG_NAME: "xmlsec-musllinux_1_2:aarch64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_aarch64", MANYLINUX_ARCH: "aarch64", RUNNER: "ubuntu-24.04-arm"}
+
+          - {TAG_NAME: "xmlsec-manylinux2014:ppc64le", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-manylinux_2_28:ppc64le", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-musllinux_1_2:ppc64le", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_ppc64le", MANYLINUX_ARCH: "ppc64le", RUNNER: "ubuntu-24.04"}
+
+          - {TAG_NAME: "xmlsec-manylinux2014:s390x", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux2014_s390x", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-manylinux_2_28:s390x", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_28_s390x", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-musllinux_1_2:s390x", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_s390x", MANYLINUX_ARCH: "s390x", RUNNER: "ubuntu-24.04"}
+
+          - {TAG_NAME: "xmlsec-manylinux_2_38:loongarch64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=manylinux_2_38_loongarch64", MANYLINUX_ARCH: "loongarch64", RUNNER: "ubuntu-24.04"}
+          - {TAG_NAME: "xmlsec-musllinux_1_2:loongarch64", DOCKERFILE_PATH: "xmlsec-linux", BUILD_ARGS: "PYCA_RELEASE=musllinux_1_2_loongarch64", MANYLINUX_ARCH: "loongarch64", RUNNER: "ubuntu-24.04"}
+
+    name: "${{ matrix.IMAGE.TAG_NAME }}"
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - run: |
+          case ${{ matrix.IMAGE.MANYLINUX_ARCH }} in
+            aarch64)
+              arch=arm64
+              ;;
+            loongarch64)
+              arch=loong64
+              sed -i 's@quay.io/pypa/${PYCA_RELEASE}@ghcr.io/loong64/${PYCA_RELEASE}@g' xmlsec-linux/Dockerfile
+              ;;
+            ppc64le)
+              arch=ppc64le
+              ;;
+            s390x)
+              arch=s390x
+              ;;
+            x86_64)
+              arch=amd64
+              ;;
+            *)
+              echo "Unsupported architecture: ${{ matrix.IMAGE.MANYLINUX_ARCH }}"
+              exit 1
+              ;;
+          esac
+          echo "BUILD_ARCH=$arch" >> $GITHUB_ENV
+      # Pull the previous image, but if it fails return true anyway.
+      # Sometimes we add new docker images and if they've never been pushed
+      # they can't be pulled.
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Pull existing image
+        run: docker pull --platform linux/$BUILD_ARCH ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }} || true
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+
+      - name: Get image name
+        id: image-name
+        run: |
+          ATTEST_IMAGE=$(echo "${{ matrix.IMAGE.TAG_NAME }}" | cut -d ':' -f 1)
+          echo "ATTEST_IMAGE=${ATTEST_IMAGE}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5  # v3.8.0
+        with:
+          cache-binary: false
+      - name: Login to ghcr.io
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+      - name: Build (and push if main) docker image
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1  # v6.16.0
+        id: docker-build
+        with:
+          context: ${{ matrix.IMAGE.DOCKERFILE_PATH }}
+          cache-from: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
+          tags: ghcr.io/loong64/${{ matrix.IMAGE.TAG_NAME }}
+          platforms: linux/${{ env.BUILD_ARCH }}
+          pull: true
+          build-args: |
+            ${{ matrix.IMAGE.BUILD_ARGS }}
+          push: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+      - uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd  # v2.3.0
+        with:
+          subject-name: "ghcr.io/loong64/${{ steps.image-name.outputs.ATTEST_IMAGE }}"
+          subject-digest: ${{ steps.docker-build.outputs.digest }}
+          push-to-registry: true
+        if: (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
