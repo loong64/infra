@@ -1,5 +1,5 @@
 diff --git a/cryptography-linux/Dockerfile b/cryptography-linux/Dockerfile
-index d3d7f51..0c5376c 100644
+index 34e79de..0c5376c 100644
 --- a/cryptography-linux/Dockerfile
 +++ b/cryptography-linux/Dockerfile
 @@ -1,29 +1,23 @@
@@ -11,7 +11,7 @@ index d3d7f51..0c5376c 100644
  LABEL org.opencontainers.image.authors="Python Cryptographic Authority"
  WORKDIR /root
  RUN \
--  if [ $(uname -m) = "x86_64" ]; \
+-  if [ $(uname -m) = "x86_64" ] || [ $(uname -m) = "ppc64le" ]; \
 -  then \
 -    if stat /etc/redhat-release 1>&2 2>/dev/null; then \
 -      yum -y install binutils perl perl-IPC-Cmd && \

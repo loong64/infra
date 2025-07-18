@@ -1,12 +1,12 @@
 diff --git a/staticnode/Dockerfile b/staticnode/Dockerfile
-index 52e7fda..6196537 100644
+index d8782ee..e2ea0af 100644
 --- a/staticnode/Dockerfile
 +++ b/staticnode/Dockerfile
 @@ -1,4 +1,4 @@
 -FROM alpine:latest
 +FROM ghcr.io/loong64/alpine:latest
  ARG VERSION
- # One of x64 or arm64
+ # One of x64 or arm64 or ppc64le
  ARG ARCH
 @@ -8,7 +8,7 @@ ARG SHA256SUM
  RUN mkdir -p /build
