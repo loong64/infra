@@ -67,6 +67,7 @@ jobs:
               ;;
             ppc64le)
               arch=ppc64le
+              sed -i 's@ghcr.io/loong64/static-nodejs@ghcr.io/pyca/static-nodejs@g' cryptography-linux/Dockerfile
               ;;
             s390x)
               arch=s390x

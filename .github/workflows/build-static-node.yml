@@ -25,7 +25,7 @@ jobs:
       matrix:
         IMAGE:
           - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "loongarch64"}
-          - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "ppc64le"}
+          # - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "ppc64le"}
           - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "s390x"}
           
     steps:
@@ -55,7 +55,7 @@ jobs:
             arch=loong64
             node_arch=loong64
             sed -i 's/--fully-static/--fully-static --openssl-no-asm/g' staticnode/Dockerfile
-            sed -i 's/manylinux2014/manylinux_2_38/g' staticnode/Dockerfile
+            sed -i 's/manylinux2014/manylinux_2_38/g' staticnode/Dockerfile-test
             ;;
           ppc64le)
             arch=ppc64le
