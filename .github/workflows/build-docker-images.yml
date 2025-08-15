@@ -59,18 +59,20 @@ jobs:
           mv source/staticnode staticnode
           rm -rf source
           git apply patches/*.patch
-          source ./staticnode/node-version.sh
+          NODE20_VERSION=$(cat staticnode/node-versions.json | jq -r '.[] | select(.version | startswith("v20")) | .version')
+          NODE24_VERSION=$(cat staticnode/node-versions.json | jq -r '.[] | select(.version | startswith("v24")) | .version')
           case ${{ matrix.IMAGE.MANYLINUX_ARCH }} in
             loongarch64)
               arch=loong64
-              sed -i 's@quay.io/pypa/${PYCA_RELEASE}@ghcr.io/loong64/${PYCA_RELEASE}@g' cryptography-linux/Dockerfile
+              sed -i 's@ghcr.io/pyca/@ghcr.io/loong64/@g' cryptography-linux/Dockerfile
+              sed -i 's@quay.io/pypa/@ghcr.io/loong64/@g' cryptography-linux/Dockerfile
               ;;
             ppc64le)
               arch=ppc64le
-              sed -i 's@ghcr.io/loong64/static-nodejs@ghcr.io/pyca/static-nodejs@g' cryptography-linux/Dockerfile
               ;;
             s390x)
               arch=s390x
+              sed -i 's@ghcr.io/pyca/@ghcr.io/loong64/@g' cryptography-linux/Dockerfile
               sed -i 's@ enable-ec_nistp_64_gcc_128@@g' cryptography-linux/openssl-version.sh
               ;;
             *)
@@ -79,7 +81,8 @@ jobs:
               ;;
           esac
           echo "BUILD_ARCH=$arch" >> $GITHUB_ENV
-          echo "NODE_ARCH_RELEASE=$arch:$NODE_VERSION" >> $GITHUB_ENV
+          echo "NODE20_ARCH_RELEASE=$arch:${NODE20_VERSION}" >> $GITHUB_ENV
+          echo "NODE24_ARCH_RELEASE=$arch:${NODE24_VERSION}" >> $GITHUB_ENV
       # Pull the previous image, but if it fails return true anyway.
       # Sometimes we add new docker images and if they've never been pushed
       # they can't be pulled.
@@ -116,7 +119,8 @@ jobs:
           platforms: linux/${{ env.BUILD_ARCH }}
           pull: true
           build-args: |
-            NODE_ARCH_RELEASE=${{ env.NODE_ARCH_RELEASE }}
+            NODE20_ARCH_RELEASE=${{ env.NODE20_ARCH_RELEASE }}
+            NODE24_ARCH_RELEASE=${{ env.NODE24_ARCH_RELEASE }}
             ${{ matrix.IMAGE.BUILD_ARGS }}
           push: ${{ (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
       - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0

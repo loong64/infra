@@ -14,9 +14,24 @@ on:
       - 'staticnode/**'
 
 jobs:
+  load-node-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.load-versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          repository: pyca/infra
+          persist-credentials: false
+      - name: Load Node.js versions
+        id: load-versions
+        run: |
+          echo "versions=$(cat staticnode/node-versions.json | jq -c '.')" >> $GITHUB_OUTPUT
+
   build:
     name: Build node.js
     runs-on: ${{ matrix.IMAGE.RUNNER }}
+    needs: load-node-versions
     permissions:
       contents: read
       packages: write
@@ -27,6 +42,7 @@ jobs:
           - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "loongarch64"}
           # - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "ppc64le"}
           - {RUNNER: "ubuntu-latest", MANYLINUX_ARCH: "s390x"}
+        NODE_CONFIG: ${{ fromJson(needs.load-node-versions.outputs.versions) }}
           
     steps:
     - uses: actions/checkout@v5.0.0
@@ -47,15 +63,15 @@ jobs:
         mv source/staticnode staticnode
         rm -rf source
         git apply patches/*.patch
-        source ./staticnode/node-version.sh
-        echo "NODE_VERSION=$NODE_VERSION" >> $GITHUB_ENV
-        echo "NODE_SHA256SUM=$NODE_SHA256SUM" >> $GITHUB_ENV
+        echo "NODE_VERSION=${{ matrix.NODE_CONFIG.version }}" >> $GITHUB_ENV
+        echo "NODE_SHA256SUM=${{ matrix.NODE_CONFIG.sha256sum }}" >> $GITHUB_ENV
+        sed -i 's@FROM alpine@FROM ghcr.io/loong64/alpine@g' staticnode/Dockerfile
         case ${{ matrix.IMAGE.MANYLINUX_ARCH }} in
           loongarch64)
             arch=loong64
             node_arch=loong64
             sed -i 's/--fully-static/--fully-static --openssl-no-asm/g' staticnode/Dockerfile
-            sed -i 's/manylinux2014/manylinux_2_38/g' staticnode/Dockerfile-test
+            sed -i 's@quay.io/pypa/manylinux2014@ghcr.io/loong64/manylinux_2_38@g' staticnode/Dockerfile-test
             ;;
           ppc64le)
             arch=ppc64le
