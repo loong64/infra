@@ -19,7 +19,7 @@ jobs:
     outputs:
       versions: ${{ steps.load-versions.outputs.versions }}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           repository: pyca/infra
           persist-credentials: false
